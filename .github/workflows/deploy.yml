@@ -5,6 +5,10 @@ on:
     branches:
       - main
       - master
+  schedule:
+    - cron: '0 0 * * 0' # Every Sunday at 00:00 UTC
+  workflow_dispatch:
+
 
 permissions:
   contents: read
