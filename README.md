@@ -1,6 +1,6 @@
-# Headless Chromium Workspace
+# Chromtrol
 
-This project adds a Go control plane to `lscr.io/linuxserver/chromium:latest`. This control plane starts and stops the
+Chromtrol is a dockerized chromium image that adds a Go control plane to `lscr.io/linuxserver/chromium:latest`. This control plane starts and stops the
 Chromium and VNC processes to reduce resource usage.
 
 When stopped, this container uses 12 MiB of memory and 0% CPU. A stock container uses more than 300 MiB of memory and 2%
