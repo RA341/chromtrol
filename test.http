@@ -1,0 +1,15 @@
+### Get current status of the display and browser service
+GET http://localhost:8080/status
+Accept: application/json
+
+###
+
+### Start the display and browser service (svc-de)
+GET http://localhost:8080/start
+Accept: application/json
+
+###
+
+### Stop the display and browser service (svc-de)
+GET http://localhost:8080/stop
+Accept: application/json
