@@ -2,6 +2,11 @@ name: Build and Push Docker Image to GHCR
 
 on:
   push:
+    paths:
+      - Dockerfile
+      - main.go
+      - docker-compose.yml
+      - .github/workflows/deploy.yml
     branches:
       - main
       - master
