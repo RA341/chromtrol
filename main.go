@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -51,8 +52,50 @@ func handleStart(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
+func cleanupTempFiles() {
+	homeDir := getEnv("HOME", "/config")
+
+	// Clean up chromium browser metrics files (.pma)
+	metricsDir := filepath.Join(homeDir, ".config/chromium/BrowserMetrics")
+	if err := os.RemoveAll(metricsDir); err != nil {
+		log.Printf("Warning: failed to clean up browser metrics directory: %v", err)
+	}
+
+	// Clean up chromium crash reports
+	crashReportsDir := filepath.Join(homeDir, ".config/chromium/Crash Reports")
+	if err := os.RemoveAll(crashReportsDir); err != nil {
+		log.Printf("Warning: failed to clean up crash reports directory: %v", err)
+	}
+
+	// Clean up chromium temporary directories in /tmp
+	if entries, err := os.ReadDir("/tmp"); err == nil {
+		for _, entry := range entries {
+			name := entry.Name()
+			if strings.HasPrefix(name, "org.chromium.Chromium.") || strings.HasPrefix(name, ".org.chromium.Chromium.") {
+				path := filepath.Join("/tmp", name)
+				if err := os.RemoveAll(path); err != nil {
+					log.Printf("Warning: failed to clean up %s: %v", path, err)
+				}
+			}
+		}
+	}
+}
+
 func handleStop(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	// Send SIGTERM to chromium to stop it gracefully before shutting down the display (so it does not crash)
+	exec.Command("pkill", "-15", "chromium").Run()
+
+	// Wait up to 3 seconds for chromium to exit completely
+	for i := 0; i < 30; i++ {
+		cmd := exec.Command("pgrep", "chromium")
+		if err := cmd.Run(); err != nil {
+			// pgrep exits with non-zero status if no matching processes are found
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 
 	// Stop in forward order (applications and proxies first)
 	var errors []string
@@ -65,6 +108,9 @@ func handleStop(w http.ResponseWriter, r *http.Request) {
 
 	// Kill any orphaned sleep processes left behind by stopped service scripts
 	exec.Command("pkill", "-f", "sleep").Run()
+
+	// Clean up BrowserMetrics, Crash Reports, and temporary Chromium directories to prevent disk and page cache memory leaks
+	cleanupTempFiles()
 
 	resp := map[string]interface{}{
 		"status":  "success",
